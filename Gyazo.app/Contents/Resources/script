@@ -38,17 +38,17 @@ File.delete(tmpfile)
 # upload
 boundary = '----BOUNDARYBOUNDARY----'
 
-HOST = 'gyazo.com'
-CGI = '/upload.cgi'
-UA   = 'Gyazo/1.0.1'
+HOST = 'api.imgur.com'
+CGI = '/2/upload'
+UA   = 'Gyazo/1.0'
 
 data = <<EOF
 --#{boundary}\r
-content-disposition: form-data; name="id"\r
+content-disposition: form-data; name="key"\r
 \r
-#{id}\r
+c9d535f1f6dae53ef2c9e40619bcced2\r
 --#{boundary}\r
-content-disposition: form-data; name="imagedata"; filename="gyazo.com"\r
+content-disposition: form-data; name="image"; filename="gyazo.com"\r
 \r
 #{imagedata}\r
 --#{boundary}--\r
@@ -62,25 +62,10 @@ header ={
 
 Net::HTTP.start(HOST,80){|http|
   res = http.post(CGI,data,header)
-  url = res.response.body
-  IO.popen("pbcopy","r+"){|io|
-    io.write url
-    io.close
-  }
+  puts res.response.to_ary.inspect
+  resbody = res.response.to_ary[1]
+  url = resbody.match(/original>(.*)<\/original/)[1]
+  
+  system "echo -n #{url} | pbcopy"
   system "open #{url}"
-
-  # save id
-  newid = res.response['X-Gyazo-Id']
-  if newid and newid != "" then
-    if !File.exist?(File.dirname(idfile)) then
-      Dir.mkdir(File.dirname(idfile))
-    end
-    if File.exist?(idfile) then
-      File.rename(idfile, idfile+Time.new.strftime("_%Y%m%d%H%M%S.bak"))
-    end
-    File.open(idfile,"w").print(newid)
-    if File.exist?(old_idfile) then
-      File.delete(old_idfile)
-    end
-  end
 }
